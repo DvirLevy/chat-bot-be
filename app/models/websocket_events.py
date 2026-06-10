@@ -8,6 +8,7 @@ Backend → Frontend:
     MessageEvent      {"type": "message", "payload": <Message>}
     ErrorEvent        {"type": "error", "message": "..."}
     StatusEvent       {"type": "status", "connected": bool, "active_participant": bool}
+    IdleTimeoutEvent  {"type": "idle_timeout", "username": "..."}
 """
 
 from typing import Literal
@@ -40,3 +41,8 @@ class StatusEvent(BaseModel):
     type: Literal["status"] = "status"
     connected: bool
     active_participant: bool
+
+
+class IdleTimeoutEvent(BaseModel):
+    type: Literal["idle_timeout"] = "idle_timeout"
+    username: str

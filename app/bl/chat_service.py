@@ -33,7 +33,7 @@ from app.helpers.time_helper import utcnow_iso
 from app.infrastructure.telegram.telegram_client import TelegramClient
 from app.infrastructure.websocket.connection_manager import ConnectionManager
 from app.models.message import Message
-from app.models.websocket_events import MessageEvent
+from app.models.websocket_events import IdleTimeoutEvent, MessageEvent
 
 logger = logging.getLogger("chatbot.service")
 
@@ -52,12 +52,14 @@ class ChatService:
         connection_manager: ConnectionManager,
         telegram_client: TelegramClient,
         user_repo: UserRepository,
+        idle_timeout_seconds: int = 300,
     ) -> None:
         self._message_repo = message_repo
         self._chat_state_repo = chat_state_repo
         self._connection_manager = connection_manager
         self._telegram_client = telegram_client
         self._user_repo = user_repo
+        self._idle_timeout_seconds = idle_timeout_seconds
 
         # Serialises the "no active participant → assign this one" path.
         self._assign_lock = asyncio.Lock()
@@ -78,7 +80,10 @@ class ChatService:
 
         active_username = await self._chat_state_repo.get_active_username()
         if active_username is not None:
-            return active_username == username
+            if active_username == username:
+                await self._chat_state_repo.touch_activity()
+                return True
+            return False
 
         async with self._assign_lock:
             active_username = await self._chat_state_repo.get_active_username()
@@ -86,7 +91,10 @@ class ChatService:
                 await self._chat_state_repo.set_active_username(username)
                 logger.info("Active participant assigned: username=%s", username)
                 return True
-            return active_username == username
+            if active_username == username:
+                await self._chat_state_repo.touch_activity()
+                return True
+            return False
 
     async def release_active(self) -> None:
         """Clear the active participant, freeing the slot for the next user."""
@@ -96,6 +104,43 @@ class ChatService:
     async def get_active_username(self) -> Optional[str]:
         """Expose the current active participant for health/status endpoints."""
         return await self._chat_state_repo.get_active_username()
+
+    # ── Idle-timeout ─────────────────────────────────────────────────────────
+
+    async def release_idle_session(self) -> Optional[str]:
+        """Release the active participant if idle past the configured timeout.
+
+        Returns the released username, or None if nothing was released.
+        """
+        active_username = await self._chat_state_repo.get_active_username()
+        if active_username is None:
+            return None
+
+        idle_seconds = await self._chat_state_repo.seconds_since_activity()
+        if idle_seconds is None or idle_seconds < self._idle_timeout_seconds:
+            return None
+
+        await self._chat_state_repo.clear_active_username()
+        logger.info(
+            "Active participant released due to inactivity: username=%s (idle %.1fs)",
+            active_username,
+            idle_seconds,
+        )
+
+        event = IdleTimeoutEvent(username=active_username)
+        await self._connection_manager.broadcast(event.model_dump())
+
+        return active_username
+
+    async def run_idle_timeout_checker(self, check_interval_seconds: float = 5.0) -> None:
+        """Background loop: periodically release the active participant if idle.
+
+        Intended to run as a long-lived asyncio.Task for the application's
+        lifetime; cancel it during shutdown.
+        """
+        while True:
+            await asyncio.sleep(check_interval_seconds)
+            await self.release_idle_session()
 
     # ── Inbound: Telegram → Frontend ─────────────────────────────────────────
 
@@ -136,6 +181,8 @@ class ChatService:
             )
             return
 
+        await self._chat_state_repo.touch_activity()
+
         sequence = await self._chat_state_repo.get_next_sequence()
         message = Message(
             id=generate_id(),
@@ -166,6 +213,10 @@ class ChatService:
         If *username* has no linked ``telegram_chat_id`` yet, the message is
         stored but cannot be delivered to Telegram — a warning is logged.
         """
+        active_username = await self._chat_state_repo.get_active_username()
+        if active_username == username:
+            await self._chat_state_repo.touch_activity()
+
         sequence = await self._chat_state_repo.get_next_sequence()
         message = Message(
             id=generate_id(),
