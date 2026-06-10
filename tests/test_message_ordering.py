@@ -14,6 +14,7 @@ async def test_sequences_are_strictly_increasing(
     chat_service: ChatService,
     message_repo,
 ) -> None:
+    await chat_service.assign_active_user("alice")
     for text in ("first", "second", "third"):
         await chat_service.handle_telegram_message(chat_id=1, text=text)
 
@@ -27,6 +28,7 @@ async def test_sequences_start_at_one(
     chat_service: ChatService,
     message_repo,
 ) -> None:
+    await chat_service.assign_active_user("alice")
     await chat_service.handle_telegram_message(chat_id=1, text="first")
     messages = await message_repo.get_all()
     assert messages[0].sequence == 1
@@ -37,6 +39,7 @@ async def test_sequences_are_unique(
     chat_service: ChatService,
     message_repo,
 ) -> None:
+    await chat_service.assign_active_user("alice")
     for i in range(10):
         await chat_service.handle_telegram_message(chat_id=1, text=f"msg {i}")
 
@@ -51,8 +54,9 @@ async def test_mixed_direction_sequences_are_unique(
     message_repo,
 ) -> None:
     """Outgoing and incoming messages share the same counter — all must be unique."""
+    await chat_service.assign_active_user("alice")
     await chat_service.handle_telegram_message(chat_id=1, text="from telegram")
-    await chat_service.handle_frontend_message("from frontend")
+    await chat_service.handle_frontend_message("from frontend", username="alice")
     await chat_service.handle_telegram_message(chat_id=1, text="from telegram 2")
 
     messages = await message_repo.get_all()
@@ -67,6 +71,7 @@ async def test_concurrent_messages_have_unique_sequences(
 ) -> None:
     """Fire 20 messages concurrently; each must receive a unique sequence number."""
     # Establish active participant.
+    await chat_service.assign_active_user("alice")
     await chat_service.handle_telegram_message(chat_id=1, text="setup")
     await message_repo.clear()
 
@@ -90,6 +95,7 @@ async def test_broadcast_payload_contains_sequence(
     chat_service: ChatService,
     mock_connection_manager,
 ) -> None:
+    await chat_service.assign_active_user("alice")
     await chat_service.handle_telegram_message(chat_id=1, text="check seq field")
 
     payload = mock_connection_manager.broadcast.call_args[0][0]["payload"]

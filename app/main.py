@@ -44,11 +44,16 @@ chat_state_repo = InMemoryChatStateRepository()
 connection_manager = ConnectionManager()
 telegram_client = TelegramClient(token=settings.TELEGRAM_BOT_TOKEN)
 
+db_engine = create_engine(settings.DATABASE_URL)
+db_sessionmaker = create_session_factory(db_engine)
+user_repo = SqlUserRepository(db_sessionmaker)
+
 chat_service = ChatService(
     message_repo=message_repo,
     chat_state_repo=chat_state_repo,
     connection_manager=connection_manager,
     telegram_client=telegram_client,
+    user_repo=user_repo,
 )
 
 update_handler = TelegramUpdateHandler(chat_service=chat_service)
@@ -64,10 +69,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Database: one async engine for the app lifetime; share the session factory
     # via app.state so SQL repositories (BE-2, BE-3) can open sessions per call.
-    db_engine = create_engine(settings.DATABASE_URL)
     app.state.db_engine = db_engine
-    app.state.db_sessionmaker = create_session_factory(db_engine)
-    app.state.user_repo = SqlUserRepository(app.state.db_sessionmaker)
+    app.state.db_sessionmaker = db_sessionmaker
+    app.state.user_repo = user_repo
     logger.info("Database engine initialised")
 
     app.state.chat_service = chat_service

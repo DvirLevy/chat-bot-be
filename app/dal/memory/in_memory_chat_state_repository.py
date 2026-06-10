@@ -13,21 +13,21 @@ class InMemoryChatStateRepository(ChatStateRepository):
     """
 
     def __init__(self) -> None:
-        self._active_chat_id: Optional[int] = None
+        self._active_username: Optional[str] = None
         self._sequence_counter: int = 0
         self._lock = asyncio.Lock()
 
-    async def get_active_chat_id(self) -> Optional[int]:
+    async def get_active_username(self) -> Optional[str]:
         async with self._lock:
-            return self._active_chat_id
+            return self._active_username
 
-    async def set_active_chat_id(self, chat_id: int) -> None:
+    async def set_active_username(self, username: str) -> None:
         async with self._lock:
-            self._active_chat_id = chat_id
+            self._active_username = username
 
-    async def clear_active_chat_id(self) -> None:
+    async def clear_active_username(self) -> None:
         async with self._lock:
-            self._active_chat_id = None
+            self._active_username = None
 
     async def get_next_sequence(self) -> int:
         """Atomically increment and return the sequence counter.
