@@ -10,6 +10,7 @@ Backend → Frontend:
     MessageEvent      {"type": "message", "payload": <Message>}
     ErrorEvent        {"type": "error", "message": "..."}
     StatusEvent       {"type": "status", "connected": bool, "active_participant": bool}
+    IdleTimeoutEvent  {"type": "idle_timeout", "username": "..."}
     HistoryEvent      {"type": "history", "messages": [<Message>, ...]}
     BusyEvent         {"type": "busy"}
     TurnGrantedEvent  {"type": "turn_granted"}
@@ -54,6 +55,11 @@ class StatusEvent(BaseModel):
     type: Literal["status"] = "status"
     connected: bool
     active_participant: bool
+
+
+class IdleTimeoutEvent(BaseModel):
+    type: Literal["idle_timeout"] = "idle_timeout"
+    username: str
 
 
 class HistoryEvent(BaseModel):

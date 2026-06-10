@@ -15,6 +15,8 @@ deprecated ``on_event``) ensures proper async teardown even when the server
 receives a SIGTERM.
 """
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -54,6 +56,7 @@ chat_service = ChatService(
     connection_manager=connection_manager,
     telegram_client=telegram_client,
     user_repo=user_repo,
+    idle_timeout_seconds=settings.IDLE_TIMEOUT_SECONDS,
 )
 
 update_handler = TelegramUpdateHandler(chat_service=chat_service)
@@ -78,12 +81,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.connection_manager = connection_manager
 
     await telegram_client.start()
+
+    idle_timeout_task = asyncio.create_task(chat_service.run_idle_timeout_checker())
     logger.info("Application ready")
 
     yield  # Server is running
 
     # Shutdown
     logger.info("Shutting down application")
+    idle_timeout_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await idle_timeout_task
     await telegram_client.stop()
     await db_engine.dispose()
     logger.info("Application stopped")

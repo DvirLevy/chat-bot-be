@@ -8,6 +8,7 @@ class ChatStateRepository(ABC):
     Manages:
     - The single active participant, identified by frontend ``username``.
     - A monotonically increasing sequence counter for message ordering.
+    - The last-activity timestamp for the active session (idle-timeout).
 
     All methods must be safe for concurrent async access.
     """
@@ -19,7 +20,10 @@ class ChatStateRepository(ABC):
 
     @abstractmethod
     async def set_active_username(self, username: str) -> None:
-        """Assign *username* as the active participant."""
+        """Assign *username* as the active participant.
+
+        Also marks the session as active now (see ``touch_activity``).
+        """
         ...
 
     @abstractmethod
@@ -33,5 +37,19 @@ class ChatStateRepository(ABC):
 
         Guaranteed to return unique, strictly increasing values even under
         concurrent access.
+        """
+        ...
+
+    @abstractmethod
+    async def touch_activity(self) -> None:
+        """Record that activity occurred now, for idle-timeout tracking."""
+        ...
+
+    @abstractmethod
+    async def seconds_since_activity(self) -> Optional[float]:
+        """Return seconds elapsed since the last recorded activity.
+
+        Returns None if no activity has been recorded (e.g. no active
+        participant yet).
         """
         ...
