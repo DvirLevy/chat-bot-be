@@ -36,7 +36,10 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     chat_service: ChatService = websocket.app.state.chat_service
     connection_manager: ConnectionManager = websocket.app.state.connection_manager
 
-    await connection_manager.connect(websocket)
+    # TODO: BE-6 replaces "default" with the real username from the join event.
+    username = "default"
+
+    await connection_manager.connect(username, websocket)
     logger.info("WebSocket connection accepted")
 
     # Notify the client about current session state.
@@ -66,9 +69,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 await websocket.send_json(error.model_dump())
                 continue
 
-            # TODO: BE-6 replaces "default" with the real username from the join event.
-            await chat_service.handle_frontend_message(event.text, username="default")
+            await chat_service.handle_frontend_message(event.text, username=username)
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
-        await connection_manager.disconnect(websocket)
+        await connection_manager.disconnect(username)
