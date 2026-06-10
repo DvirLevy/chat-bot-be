@@ -24,12 +24,12 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
 
     async def connect(self, username: str, websocket: WebSocket) -> None:
-        """Accept the handshake and register the connection under *username*.
+        """Register *websocket* as the connection for *username*.
 
-        A new connection for an already-registered username replaces the
-        previous one.
+        The caller is responsible for accepting the WebSocket handshake
+        before calling this method.  A new connection for an
+        already-registered username replaces the previous one.
         """
-        await websocket.accept()
         async with self._lock:
             self._connections[username] = websocket
         logger.info(

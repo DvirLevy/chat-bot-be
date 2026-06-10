@@ -23,7 +23,7 @@ Sequence numbers
 
 import asyncio
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from app.dal.repositories.chat_state_repository import ChatStateRepository
 from app.dal.repositories.message_repository import MessageRepository
@@ -93,9 +93,26 @@ class ChatService:
         await self._chat_state_repo.clear_active_username()
         logger.info("Active participant released")
 
+    async def release_active_if(self, username: str) -> None:
+        """Release the active slot only if it is currently held by *username*.
+
+        Used for ``end_chat`` and disconnect handling, where a non-active
+        (busy) user dropping their connection must not free the active slot.
+        """
+        active_username = await self._chat_state_repo.get_active_username()
+        if active_username == username:
+            await self._chat_state_repo.clear_active_username()
+            logger.info("Active participant released: username=%s", username)
+
     async def get_active_username(self) -> Optional[str]:
         """Expose the current active participant for health/status endpoints."""
         return await self._chat_state_repo.get_active_username()
+
+    # ── History ───────────────────────────────────────────────────────────────
+
+    async def get_history(self, username: str) -> List[Message]:
+        """Return *username*'s message history, ordered by sequence."""
+        return await self._message_repo.get_by_user(username)
 
     # ── Inbound: Telegram → Frontend ─────────────────────────────────────────
 
