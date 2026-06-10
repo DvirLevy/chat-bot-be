@@ -1,6 +1,25 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: chat-bridge-db
+    environment:
+      POSTGRES_USER: chatbot
+      POSTGRES_PASSWORD: chatbot
+      POSTGRES_DB: chatbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbot -d chatbot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   backend:
     build:
       context: .
@@ -9,6 +28,12 @@ services:
     container_name: chat-bridge-backend
     env_file:
       - .env
+    environment:
+      # Override the .env URL so the container reaches Postgres by service name.
+      DATABASE_URL: postgresql+asyncpg://chatbot:chatbot@db:5432/chatbot
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -18,3 +43,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  pgdata:

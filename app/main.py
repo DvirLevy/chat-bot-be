@@ -26,6 +26,7 @@ from app.api.routes.websocket import router as ws_router
 from app.bl.chat_service import ChatService
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.dal.db.session import create_engine, create_session_factory
 from app.dal.memory.in_memory_chat_state_repository import InMemoryChatStateRepository
 from app.dal.memory.in_memory_message_repository import InMemoryMessageRepository
 from app.infrastructure.telegram.telegram_client import TelegramClient
@@ -59,6 +60,14 @@ telegram_client.add_message_handler(update_handler.handle_message)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("Starting application (env=%s)", settings.APP_ENV)
+
+    # Database: one async engine for the app lifetime; share the session factory
+    # via app.state so SQL repositories (BE-2, BE-3) can open sessions per call.
+    db_engine = create_engine(settings.DATABASE_URL)
+    app.state.db_engine = db_engine
+    app.state.db_sessionmaker = create_session_factory(db_engine)
+    logger.info("Database engine initialised")
+
     app.state.chat_service = chat_service
     app.state.connection_manager = connection_manager
 
@@ -70,6 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     logger.info("Shutting down application")
     await telegram_client.stop()
+    await db_engine.dispose()
     logger.info("Application stopped")
 
 
