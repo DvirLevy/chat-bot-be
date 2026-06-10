@@ -3,7 +3,9 @@
     "allow": [
       "Skill(run)",
       "Bash(python3 -V)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(python3.10 -c \"import sqlalchemy\")",
+      "Bash(.venv/bin/python -m pytest tests/test_user_repository.py -v)"
     ]
   }
 }

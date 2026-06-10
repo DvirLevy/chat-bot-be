@@ -27,6 +27,7 @@ from app.bl.chat_service import ChatService
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.dal.db.session import create_engine, create_session_factory
+from app.dal.db.sql_user_repository import SqlUserRepository
 from app.dal.memory.in_memory_chat_state_repository import InMemoryChatStateRepository
 from app.dal.memory.in_memory_message_repository import InMemoryMessageRepository
 from app.infrastructure.telegram.telegram_client import TelegramClient
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db_engine = create_engine(settings.DATABASE_URL)
     app.state.db_engine = db_engine
     app.state.db_sessionmaker = create_session_factory(db_engine)
+    app.state.user_repo = SqlUserRepository(app.state.db_sessionmaker)
     logger.info("Database engine initialised")
 
     app.state.chat_service = chat_service
