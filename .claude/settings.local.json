@@ -5,7 +5,8 @@
       "Bash(python3 -V)",
       "Bash(git init *)",
       "Bash(python3.10 -c \"import sqlalchemy\")",
-      "Bash(.venv/bin/python -m pytest tests/test_user_repository.py -v)"
+      "Bash(.venv/bin/python -m pytest tests/test_user_repository.py -v)",
+      "Bash(.venv/bin/python -m py_compile app/models/message.py app/dal/repositories/message_repository.py app/dal/memory/in_memory_message_repository.py app/dal/db/sql_message_repository.py)"
     ]
   }
 }

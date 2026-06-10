@@ -21,6 +21,11 @@ class MessageRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_by_user(self, username: str) -> List[Message]:
+        """Return messages owned by *username*, ordered by sequence."""
+        ...
+
+    @abstractmethod
     async def clear(self) -> None:
         """Remove all stored messages."""
         ...
