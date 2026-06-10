@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Bash(python3 -V)",
+      "Bash(git init *)"
+    ]
+  }
+}
