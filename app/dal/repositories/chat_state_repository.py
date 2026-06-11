@@ -6,24 +6,28 @@ class ChatStateRepository(ABC):
     """Abstract contract for chat session state.
 
     Manages:
-    - The single active Telegram chat ID (at most one at a time).
+    - The single active participant, identified by frontend ``username``.
     - A monotonically increasing sequence counter for message ordering.
+    - The last-activity timestamp for the active session (idle-timeout).
 
     All methods must be safe for concurrent async access.
     """
 
     @abstractmethod
-    async def get_active_chat_id(self) -> Optional[int]:
-        """Return the current active Telegram chat ID, or None if unset."""
+    async def get_active_username(self) -> Optional[str]:
+        """Return the current active participant's username, or None if unset."""
         ...
 
     @abstractmethod
-    async def set_active_chat_id(self, chat_id: int) -> None:
-        """Assign a Telegram chat ID as the active participant."""
+    async def set_active_username(self, username: str) -> None:
+        """Assign *username* as the active participant.
+
+        Also marks the session as active now (see ``touch_activity``).
+        """
         ...
 
     @abstractmethod
-    async def clear_active_chat_id(self) -> None:
+    async def clear_active_username(self) -> None:
         """Remove the active participant (reset to None)."""
         ...
 
@@ -33,5 +37,19 @@ class ChatStateRepository(ABC):
 
         Guaranteed to return unique, strictly increasing values even under
         concurrent access.
+        """
+        ...
+
+    @abstractmethod
+    async def touch_activity(self) -> None:
+        """Record that activity occurred now, for idle-timeout tracking."""
+        ...
+
+    @abstractmethod
+    async def seconds_since_activity(self) -> Optional[float]:
+        """Return seconds elapsed since the last recorded activity.
+
+        Returns None if no activity has been recorded (e.g. no active
+        participant yet).
         """
         ...

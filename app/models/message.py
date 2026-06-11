@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,3 +17,6 @@ class Message(BaseModel):
     )
     timestamp: str = Field(..., description="ISO-8601 UTC timestamp")
     sequence: int = Field(..., description="Monotonically increasing sequence number")
+    username: Optional[str] = Field(
+        default=None, description="Username of the owning participant"
+    )

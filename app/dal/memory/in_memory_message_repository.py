@@ -25,6 +25,13 @@ class InMemoryMessageRepository(MessageRepository):
             # Return a shallow copy so callers cannot mutate the internal list.
             return list(self._messages)
 
+    async def get_by_user(self, username: str) -> List[Message]:
+        async with self._lock:
+            return sorted(
+                (m for m in self._messages if m.username == username),
+                key=lambda m: m.sequence,
+            )
+
     async def clear(self) -> None:
         async with self._lock:
             self._messages.clear()
