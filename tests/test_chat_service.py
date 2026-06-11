@@ -60,7 +60,7 @@ async def test_outgoing_message_sent_to_telegram(
 
     await chat_service.handle_frontend_message("Reply from frontend", username="alice")
 
-    mock_telegram_client.send_message.assert_awaited_once_with(42, "Reply from frontend")
+    mock_telegram_client.send_message.assert_awaited_once_with(42, "alice: Reply from frontend")
 
 
 @pytest.mark.asyncio

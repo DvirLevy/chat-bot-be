@@ -255,7 +255,7 @@ class ChatService:
             )
             return
 
-        await self._telegram_client.send_message(user.telegram_chat_id, text)
+        await self._telegram_client.send_message(user.telegram_chat_id, f"{username}: {text}")
 
         logger.info(
             "Frontend → Telegram | id=%s seq=%d username=%s chat_id=%d",
