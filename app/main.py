@@ -1,20 +1,3 @@
-"""
-Application entry point.
-
-Dependency wiring
------------------
-All concrete implementations are instantiated here and stored on
-``app.state``.  Routes access them via ``websocket.app.state`` or
-``request.app.state`` so that no layer imports another layer's concrete type.
-
-Lifecycle
----------
-FastAPI's ``lifespan`` context manager starts the Telegram bot on startup and
-gracefully shuts it down on application exit.  Using lifespan (rather than
-deprecated ``on_event``) ensures proper async teardown even when the server
-receives a SIGTERM.
-"""
-
 import asyncio
 import contextlib
 from contextlib import asynccontextmanager
@@ -36,10 +19,8 @@ from app.infrastructure.telegram.telegram_client import TelegramClient
 from app.infrastructure.telegram.telegram_update_handler import TelegramUpdateHandler
 from app.infrastructure.websocket.connection_manager import ConnectionManager
 
-# Configure logging as early as possible.
 logger = setup_logging(settings.APP_ENV)
 
-# ── Compose the dependency graph ──────────────────────────────────────────────
 
 chat_state_repo = InMemoryChatStateRepository()
 connection_manager = ConnectionManager()
@@ -63,15 +44,10 @@ update_handler = TelegramUpdateHandler(chat_service=chat_service)
 telegram_client.add_message_handler(update_handler.handle_message)
 
 
-# ── Application lifespan ──────────────────────────────────────────────────────
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup
     logger.info("Starting application (env=%s)", settings.APP_ENV)
 
-    # Database: one async engine for the app lifetime; share the session factory
-    # via app.state so SQL repositories (BE-2, BE-3) can open sessions per call.
     app.state.db_engine = db_engine
     app.state.db_sessionmaker = db_sessionmaker
     app.state.user_repo = user_repo
@@ -85,9 +61,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     idle_timeout_task = asyncio.create_task(chat_service.run_idle_timeout_checker())
     logger.info("Application ready")
 
-    yield  # Server is running
+    yield
 
-    # Shutdown
     logger.info("Shutting down application")
     idle_timeout_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
@@ -95,9 +70,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await telegram_client.stop()
     await db_engine.dispose()
     logger.info("Application stopped")
-
-
-# ── FastAPI app factory ───────────────────────────────────────────────────────
 
 app = FastAPI(
     title="Chat Bridge API",

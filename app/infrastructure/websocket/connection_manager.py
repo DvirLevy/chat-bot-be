@@ -10,30 +10,12 @@ logger = logging.getLogger("chatbot.websocket")
 
 
 class ConnectionManager:
-    """Manages active WebSocket connections, keyed by frontend username.
-
-    Responsibilities:
-    - Accept and track connections per username.
-    - Broadcast JSON payloads to all connected clients.
-    - Send a JSON payload to a single user's connection.
-    - Silently drop stale connections discovered during send/broadcast.
-
-    All public methods are async and safe to call concurrently.
-    """
 
     def __init__(self) -> None:
         self._connections: Dict[str, WebSocket] = {}
         self._lock = asyncio.Lock()
 
     async def connect(self, username: str, websocket: WebSocket) -> None:
-        """Register *websocket* as the connection for *username*.
-
-        The caller is responsible for accepting the WebSocket handshake
-        before calling this method.  A new connection for an
-        already-registered username replaces the previous one — the
-        previous connection is notified with a ``session_replaced`` event
-        and closed, so only one tab/window per username stays live.
-        """
         async with self._lock:
             previous = self._connections.get(username)
             self._connections[username] = websocket
@@ -56,13 +38,6 @@ class ConnectionManager:
         )
 
     async def disconnect(self, username: str, websocket: WebSocket) -> bool:
-        """Remove *username*'s connection from the active map.
-
-        Only removes the entry if it still points at *websocket* — a
-        connection that was already replaced (and closed) by a newer one
-        must not clear the new connection's registration.  Returns True if
-        the entry was removed.
-        """
         async with self._lock:
             if self._connections.get(username) is websocket:
                 self._connections.pop(username, None)
@@ -77,10 +52,6 @@ class ConnectionManager:
         return removed
 
     async def send_to(self, username: str, data: dict) -> None:
-        """Send *data* as JSON to *username*'s connection, if any.
-
-        If the connection is dead or missing, it is silently dropped.
-        """
         async with self._lock:
             websocket = self._connections.get(username)
 
@@ -96,12 +67,6 @@ class ConnectionManager:
                 self._connections.pop(username, None)
 
     async def broadcast(self, data: dict) -> None:
-        """Send *data* as JSON to every connected client.
-
-        Any connection that fails to receive the message is removed from the
-        active map so that future broadcasts are not blocked by dead sockets.
-        """
-        # Snapshot the current connections so we don't hold the lock during I/O.
         async with self._lock:
             connections = dict(self._connections)
 
@@ -121,5 +86,4 @@ class ConnectionManager:
 
     @property
     def active_count(self) -> int:
-        """Number of currently registered connections (not coroutine-safe for decisions)."""
         return len(self._connections)

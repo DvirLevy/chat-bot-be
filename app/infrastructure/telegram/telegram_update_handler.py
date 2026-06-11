@@ -11,12 +11,6 @@ logger = logging.getLogger("chatbot.telegram")
 
 
 class TelegramUpdateHandler:
-    """Bridges python-telegram-bot callbacks to the ChatService.
-
-    Kept deliberately thin — no business logic lives here.
-    Its only job is to extract the relevant fields from a Telegram Update and
-    delegate to the service layer.
-    """
 
     def __init__(self, chat_service: "ChatService") -> None:
         self._chat_service = chat_service
@@ -26,12 +20,11 @@ class TelegramUpdateHandler:
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
-        """Invoked by python-telegram-bot for every plain-text message."""
         if update.message is None or not update.message.text:
             logger.debug("Received update without text — skipping")
             return
 
-        chat_id: int = update.effective_chat.id  # type: ignore[union-attr]
+        chat_id: int = update.effective_chat.id
         text: str = update.message.text
 
         logger.debug(

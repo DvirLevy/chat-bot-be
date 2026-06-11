@@ -1,5 +1,3 @@
-"""Postgres-backed implementation of ``MessageRepository``."""
-
 from datetime import datetime
 from typing import List
 

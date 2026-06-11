@@ -6,11 +6,6 @@ from app.models.message import Message
 
 
 class InMemoryMessageRepository(MessageRepository):
-    """Thread-safe in-memory implementation of MessageRepository.
-
-    Uses an asyncio.Lock to serialise mutations so that concurrent coroutines
-    cannot observe a partially-updated list.
-    """
 
     def __init__(self) -> None:
         self._messages: List[Message] = []
@@ -22,7 +17,6 @@ class InMemoryMessageRepository(MessageRepository):
 
     async def get_all(self) -> List[Message]:
         async with self._lock:
-            # Return a shallow copy so callers cannot mutate the internal list.
             return list(self._messages)
 
     async def get_by_user(self, username: str) -> List[Message]:

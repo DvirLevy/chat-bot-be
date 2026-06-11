@@ -1,5 +1,3 @@
-"""Postgres-backed implementation of ``UserRepository``."""
-
 from typing import Optional
 
 from sqlalchemy import func, select, update
