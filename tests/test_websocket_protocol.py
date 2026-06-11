@@ -120,6 +120,25 @@ def test_returning_user_receives_their_history(client: TestClient) -> None:
         assert history["messages"][0]["text"] == "hello"
 
 
+def test_second_tab_same_user_replaces_first(client: TestClient) -> None:
+    with client.websocket_connect("/ws") as alice_ws1:
+        _join(alice_ws1, "alice")
+        alice_ws1.receive_json()  # history
+        alice_ws1.receive_json()  # turn_granted
+
+        with client.websocket_connect("/ws") as alice_ws2:
+            _join(alice_ws2, "alice")
+            alice_ws2.receive_json()  # history
+            alice_ws2.receive_json()  # turn_granted
+
+            # The first tab is notified that its session was replaced.
+            replaced = alice_ws1.receive_json()
+            assert replaced["type"] == "session_replaced"
+
+            # The second tab remains the active participant and can send.
+            alice_ws2.send_json({"type": "send_message", "text": "hi"})
+
+
 def test_busy_user_cannot_send_message(client: TestClient) -> None:
     with client.websocket_connect("/ws") as alice_ws:
         _join(alice_ws, "alice")

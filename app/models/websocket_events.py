@@ -14,6 +14,7 @@ Backend → Frontend:
     HistoryEvent      {"type": "history", "messages": [<Message>, ...]}
     BusyEvent         {"type": "busy"}
     TurnGrantedEvent  {"type": "turn_granted"}
+    SessionReplacedEvent {"type": "session_replaced"}
 """
 
 from typing import List, Literal
@@ -73,3 +74,7 @@ class BusyEvent(BaseModel):
 
 class TurnGrantedEvent(BaseModel):
     type: Literal["turn_granted"] = "turn_granted"
+
+
+class SessionReplacedEvent(BaseModel):
+    type: Literal["session_replaced"] = "session_replaced"

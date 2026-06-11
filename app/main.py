@@ -29,9 +29,9 @@ from app.bl.chat_service import ChatService
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.dal.db.session import create_engine, create_session_factory
+from app.dal.db.sql_message_repository import SqlMessageRepository
 from app.dal.db.sql_user_repository import SqlUserRepository
 from app.dal.memory.in_memory_chat_state_repository import InMemoryChatStateRepository
-from app.dal.memory.in_memory_message_repository import InMemoryMessageRepository
 from app.infrastructure.telegram.telegram_client import TelegramClient
 from app.infrastructure.telegram.telegram_update_handler import TelegramUpdateHandler
 from app.infrastructure.websocket.connection_manager import ConnectionManager
@@ -41,7 +41,6 @@ logger = setup_logging(settings.APP_ENV)
 
 # ── Compose the dependency graph ──────────────────────────────────────────────
 
-message_repo = InMemoryMessageRepository()
 chat_state_repo = InMemoryChatStateRepository()
 connection_manager = ConnectionManager()
 telegram_client = TelegramClient(token=settings.TELEGRAM_BOT_TOKEN)
@@ -49,6 +48,7 @@ telegram_client = TelegramClient(token=settings.TELEGRAM_BOT_TOKEN)
 db_engine = create_engine(settings.DATABASE_URL)
 db_sessionmaker = create_session_factory(db_engine)
 user_repo = SqlUserRepository(db_sessionmaker)
+message_repo = SqlMessageRepository(db_sessionmaker)
 
 chat_service = ChatService(
     message_repo=message_repo,

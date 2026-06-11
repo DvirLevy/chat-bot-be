@@ -43,6 +43,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         - Upserts the user and tries to become the active participant.
         - If accepted: Backend → Frontend: HistoryEvent, then TurnGrantedEvent.
         - If another user is active: Backend → Frontend: BusyEvent.
+        - If this username already has a connection (e.g. another tab),
+          that connection receives SessionReplacedEvent and is closed.
 
     Subsequent frontend messages:
         {"type": "send_message", "text": "..."}
@@ -145,5 +147,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
         if username is not None:
-            await connection_manager.disconnect(username)
-            await chat_service.release_active_if(username)
+            was_current = await connection_manager.disconnect(username, websocket)
+            if was_current:
+                await chat_service.release_active_if(username)

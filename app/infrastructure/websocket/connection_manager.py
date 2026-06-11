@@ -4,6 +4,8 @@ from typing import Dict
 
 from fastapi import WebSocket
 
+from app.models.websocket_events import SessionReplacedEvent
+
 logger = logging.getLogger("chatbot.websocket")
 
 
@@ -28,25 +30,51 @@ class ConnectionManager:
 
         The caller is responsible for accepting the WebSocket handshake
         before calling this method.  A new connection for an
-        already-registered username replaces the previous one.
+        already-registered username replaces the previous one — the
+        previous connection is notified with a ``session_replaced`` event
+        and closed, so only one tab/window per username stays live.
         """
         async with self._lock:
+            previous = self._connections.get(username)
             self._connections[username] = websocket
+
+        if previous is not None and previous is not websocket:
+            try:
+                await previous.send_json(SessionReplacedEvent().model_dump())
+                await previous.close()
+            except Exception as exc:
+                logger.warning(
+                    "Failed to close replaced connection for username=%s: %s",
+                    username,
+                    exc,
+                )
+
         logger.info(
             "Frontend connected — username=%s, total connections: %d",
             username,
             len(self._connections),
         )
 
-    async def disconnect(self, username: str) -> None:
-        """Remove *username*'s connection from the active map."""
+    async def disconnect(self, username: str, websocket: WebSocket) -> bool:
+        """Remove *username*'s connection from the active map.
+
+        Only removes the entry if it still points at *websocket* — a
+        connection that was already replaced (and closed) by a newer one
+        must not clear the new connection's registration.  Returns True if
+        the entry was removed.
+        """
         async with self._lock:
-            self._connections.pop(username, None)
+            if self._connections.get(username) is websocket:
+                self._connections.pop(username, None)
+                removed = True
+            else:
+                removed = False
         logger.info(
             "Frontend disconnected — username=%s, total connections: %d",
             username,
             len(self._connections),
         )
+        return removed
 
     async def send_to(self, username: str, data: dict) -> None:
         """Send *data* as JSON to *username*'s connection, if any.
