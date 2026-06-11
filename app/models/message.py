@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 
 
 class Message(BaseModel):
-    """Canonical message structure shared across all layers."""
 
     id: str = Field(..., description="UUID string")
     text: str = Field(..., description="Message body")

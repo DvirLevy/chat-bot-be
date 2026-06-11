@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 
 
 class User(BaseModel):
-    """Canonical user/participant structure shared across all layers."""
 
     username: str = Field(..., description="Frontend participant identifier")
     telegram_chat_id: Optional[int] = Field(

@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 
 class TelegramUser(BaseModel):
-    """Lightweight representation of a Telegram user."""
 
     id: int
     username: Optional[str] = None

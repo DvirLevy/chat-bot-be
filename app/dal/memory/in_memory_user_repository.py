@@ -1,5 +1,3 @@
-"""In-memory implementation of ``UserRepository``, used in tests."""
-
 import asyncio
 from typing import Dict, Optional
 

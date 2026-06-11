@@ -31,41 +31,12 @@ _INVALID_FORMAT_MESSAGE = (
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
-    """Real-time bidirectional channel between the React frontend and the service.
-
-    Protocol
-    --------
-    On connect:
-        Backend → Frontend: StatusEvent
-
-    First frontend message must be a join event:
-        {"type": "join", "username": "..."}
-        - Upserts the user and tries to become the active participant.
-        - If accepted: Backend → Frontend: HistoryEvent, then TurnGrantedEvent.
-        - If another user is active: Backend → Frontend: BusyEvent.
-        - If this username already has a connection (e.g. another tab),
-          that connection receives SessionReplacedEvent and is closed.
-
-    Subsequent frontend messages:
-        {"type": "send_message", "text": "..."}
-            Routed via ChatService.
-        {"type": "end_chat"}
-            Releases the active slot if held by this user.
-
-    On parse / validation error:
-        Backend → Frontend: ErrorEvent
-
-    On disconnect:
-        Connection is removed from the manager and the active slot is
-        released if it was held by this user.
-    """
     chat_service: ChatService = websocket.app.state.chat_service
     connection_manager: ConnectionManager = websocket.app.state.connection_manager
 
     await websocket.accept()
     logger.info("WebSocket connection accepted")
 
-    # Notify the client about current session state.
     active_username = await chat_service.get_active_username()
     status_event = StatusEvent(
         connected=True,
