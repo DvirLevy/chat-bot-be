@@ -94,6 +94,58 @@ async def test_frontend_message_not_delivered_when_no_chat_id_linked(
 
 
 @pytest.mark.asyncio
+async def test_first_frontend_message_uses_default_chat_id(
+    message_repo,
+    chat_state_repo,
+    mock_connection_manager,
+    mock_telegram_client,
+    user_repo,
+) -> None:
+    chat_service = ChatService(
+        message_repo=message_repo,
+        chat_state_repo=chat_state_repo,
+        connection_manager=mock_connection_manager,
+        telegram_client=mock_telegram_client,
+        user_repo=user_repo,
+        default_telegram_chat_id=999,
+    )
+
+    await chat_service.assign_active_user("alice")
+    await chat_service.handle_frontend_message("First message", username="alice")
+
+    mock_telegram_client.send_message.assert_awaited_once_with(999, "alice: First message")
+
+    user = await user_repo.get_by_username("alice")
+    assert user.telegram_chat_id is None
+
+
+@pytest.mark.asyncio
+async def test_linked_chat_id_takes_priority_over_default(
+    message_repo,
+    chat_state_repo,
+    mock_connection_manager,
+    mock_telegram_client,
+    user_repo,
+) -> None:
+    chat_service = ChatService(
+        message_repo=message_repo,
+        chat_state_repo=chat_state_repo,
+        connection_manager=mock_connection_manager,
+        telegram_client=mock_telegram_client,
+        user_repo=user_repo,
+        default_telegram_chat_id=999,
+    )
+
+    await chat_service.assign_active_user("alice")
+    await chat_service.handle_telegram_message(chat_id=42, text="Hi from Telegram")
+    mock_telegram_client.send_message.reset_mock()
+
+    await chat_service.handle_frontend_message("Reply from frontend", username="alice")
+
+    mock_telegram_client.send_message.assert_awaited_once_with(42, "alice: Reply from frontend")
+
+
+@pytest.mark.asyncio
 async def test_message_has_required_fields(
     chat_service: ChatService,
     mock_connection_manager,

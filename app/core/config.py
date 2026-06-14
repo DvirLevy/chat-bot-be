@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +9,7 @@ class Settings(BaseSettings):
     APP_PORT: int = 8000
     FRONTEND_ORIGIN: str = "http://localhost:5173"
     TELEGRAM_BOT_TOKEN: str
+    TELEGRAM_CHAT_ID: Optional[int] = None
 
     DATABASE_URL: str = (
         "postgresql+asyncpg://chatbot:chatbot@localhost:5432/chatbot"

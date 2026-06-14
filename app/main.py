@@ -38,6 +38,7 @@ chat_service = ChatService(
     telegram_client=telegram_client,
     user_repo=user_repo,
     idle_timeout_seconds=settings.IDLE_TIMEOUT_SECONDS,
+    default_telegram_chat_id=settings.TELEGRAM_CHAT_ID,
 )
 
 update_handler = TelegramUpdateHandler(chat_service=chat_service)
