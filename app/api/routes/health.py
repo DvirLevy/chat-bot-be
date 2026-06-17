@@ -9,4 +9,4 @@ class HealthResponse(BaseModel):
 
 @router.get("/health", response_model=HealthResponse, summary="Liveness check")
 async def health_check() -> HealthResponse:
-    return HealthResponse(status="healthy")
+    return HealthResponse(status="OK :)")
