@@ -25,6 +25,7 @@ class ChatService:
         telegram_client: TelegramClient,
         user_repo: UserRepository,
         idle_timeout_seconds: int = 300,
+        default_telegram_chat_id: Optional[int] = None,
     ) -> None:
         self._message_repo = message_repo
         self._chat_state_repo = chat_state_repo
@@ -32,6 +33,7 @@ class ChatService:
         self._telegram_client = telegram_client
         self._user_repo = user_repo
         self._idle_timeout_seconds = idle_timeout_seconds
+        self._default_telegram_chat_id = default_telegram_chat_id
 
         self._assign_lock = asyncio.Lock()
 
@@ -170,7 +172,11 @@ class ChatService:
         await self._message_repo.add(message)
 
         user = await self._user_repo.get_by_username(username)
-        if user is None or user.telegram_chat_id is None:
+        chat_id = user.telegram_chat_id if user is not None else None
+        if chat_id is None:
+            chat_id = self._default_telegram_chat_id
+
+        if chat_id is None:
             logger.warning(
                 "Frontend message stored but not delivered — no Telegram chat "
                 "linked for username=%s",
@@ -178,12 +184,12 @@ class ChatService:
             )
             return
 
-        await self._telegram_client.send_message(user.telegram_chat_id, f"{username}: {text}")
+        await self._telegram_client.send_message(chat_id, f"{username}: {text}")
 
         logger.info(
             "Frontend → Telegram | id=%s seq=%d username=%s chat_id=%d",
             message.id,
             sequence,
             username,
-            user.telegram_chat_id,
+            chat_id,
         )
